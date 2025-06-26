@@ -50,6 +50,9 @@ func ParseThaiDateTime(input string) string {
 	}
 
 	day := dateMatch[1]
+	if len(day) == 1 {
+		day = "0" + day
+	}
 	monthName := dateMatch[2]
 	month, ok := ThaiMonthMap[monthName]
 	if !ok {
