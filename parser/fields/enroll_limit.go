@@ -10,10 +10,9 @@ import (
 // ParseEnrollLimit ค้นหาและกำหนดค่า EnrollLimit (จำนวนรับสมัคร)
 func ParseEnrollLimit(lines []string, i int, output *types.Output) int {
 	clean := utils.CleanText(lines[i])
-	if !strings.Contains(clean, "1.4 จำนวนรับสมัคร") || output.EnrollLimit != 0 {
+	if (!strings.Contains(clean, "1.4 จำนวนรับสมัคร") && !strings.Contains(clean, "1.4 จำนวนผู้เข้าร่วมอบรม")) || output.EnrollLimit != 0 {
 		return i
 	}
-
 	// ไล่หาบรรทัดถัดไปจนกว่าจะถึง 1.5 หรือจบไฟล์
 	for j := i + 1; j < len(lines) && !strings.Contains(lines[j], "1.5 กลุ่มเป้าหมาย"); j++ {
 		content := utils.CleanText(lines[j])
