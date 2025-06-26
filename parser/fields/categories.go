@@ -50,6 +50,8 @@ func ParseCategories(docxPath string, output *types.Output) {
 func extractCheckedCategories(paragraphs []types.Paragraph) []string {
 	var categories []string
 	foundHeader := false
+	foundAnyCheckbox := false
+	var plainTextCandidates []string
 
 	for _, p := range paragraphs {
 		// รวม text ทั้ง paragraph
@@ -59,28 +61,48 @@ func extractCheckedCategories(paragraphs []types.Paragraph) []string {
 				text += strings.TrimSpace(r.Text.Text)
 			}
 		}
-		// หาหัวข้อ "หมวดหมู่การเรียนรู้"
+		// หาหัวข้อ
 		if !foundHeader && strings.Contains(text, "หมวดหมู่การเรียนรู้") {
 			foundHeader = true
-			continue // เริ่มเก็บตั้งแต่ paragraph ถัดไป
+			continue
 		}
-
-		// ถ้ายังไม่เจอหัวข้อ ก็ข้ามไป
 		if !foundHeader {
 			continue
 		}
 
-		// หา checkbox ที่ติ๊ก
-		for i, r := range p.Runs {
+		// ------ (1) ปกติ: มี checkbox ------
+		expectLabel := false
+		hasCheckbox := false
+		for _, r := range p.Runs {
 			if r.Sym != nil && r.Sym.Font == "Wingdings" && strings.ToUpper(r.Sym.Char) == "F0FE" {
-				if i+1 < len(p.Runs) && p.Runs[i+1].Text != nil {
-					category := strings.TrimSpace(p.Runs[i+1].Text.Text)
-					if category != "" {
-						categories = append(categories, category)
-					}
+				expectLabel = true
+				hasCheckbox = true
+				foundAnyCheckbox = true
+				continue
+			}
+			if expectLabel && r.Text != nil {
+				label := strings.TrimSpace(r.Text.Text)
+				if label != "" {
+					categories = append(categories, label)
+					expectLabel = false
 				}
 			}
 		}
+
+		// ------ (2) กรณีพิเศษ: ไม่มี checkbox แต่ paragraph มีข้อความ ------
+		// (เก็บเป็น candidate เผื่อเป็น category เดียว)
+		if !hasCheckbox && len(text) > 0 {
+			plainTextCandidates = append(plainTextCandidates, text)
+		}
+		// ถ้า paragraph ว่างหลังเจอ header ให้หยุดเก็บ plain text (optional, กรณีมีหลายบรรทัด)
+		if foundHeader && len(text) == 0 && len(plainTextCandidates) > 0 {
+			break
+		}
+	}
+
+	// ถ้าไม่เจอ checkbox เลย ให้คืน plain text ที่เก็บมาเป็น category
+	if !foundAnyCheckbox && len(plainTextCandidates) > 0 {
+		return plainTextCandidates
 	}
 	return categories
 }
